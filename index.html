@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Decrease-and-Conquer · Topological Sort</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="scanline" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-mark">§4.1</span>
+      <div class="brand-text">
+        <h1>Decrease&nbsp;&amp;&nbsp;Conquer<span class="dot">.</span></h1>
+        <p>Topological sorting on a directed acyclic graph</p>
+      </div>
+    </div>
+    <nav class="algo-switch" role="tablist" aria-label="Algorithm selection">
+      <button class="switch-btn active" data-algo="dfs" role="tab" aria-selected="true">
+        <span class="idx">01</span> DFS&nbsp;&mdash;&nbsp;finish stack
+      </button>
+      <button class="switch-btn" data-algo="kahn" role="tab" aria-selected="false">
+        <span class="idx">02</span> Source&nbsp;removal&nbsp;&mdash;&nbsp;queue
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- THEORY -->
+  <section class="theory" id="theory">
+    <button class="theory-toggle" id="theoryToggle" aria-expanded="true">
+      <span>Reduction to first principles</span>
+      <span class="chev">&#9662;</span>
+    </button>
+    <div class="theory-body" id="theoryBody">
+      <div class="theory-grid">
+        <article>
+          <h2><span class="tag">Claim</span> A topological order exists <em>iff</em> G is a DAG</h2>
+          <p><strong>(&rArr;) Order exists &rArr; no cycles.</strong> Suppose a topological order exists but G contains a cycle
+          v<sub>1</sub>&rarr;v<sub>2</sub>&rarr;&hellip;&rarr;v<sub>k</sub>&rarr;v<sub>1</sub>. In any linear ordering consistent with the edges,
+          v<sub>1</sub> must precede v<sub>2</sub>, which must precede v<sub>3</sub>, &hellip;, which must precede v<sub>1</sub> &mdash;
+          forcing v<sub>1</sub> to precede itself. Contradiction. So a graph with a topological order has no directed cycle, i.e. it is a DAG.</p>
+          <p><strong>(&lArr;) DAG &rArr; order exists.</strong> Induct on |V|. A nonempty finite DAG always has at least one <em>source</em>
+          (in-degree&nbsp;0): walk backward along incoming edges from any vertex; since the graph is finite and acyclic this walk cannot revisit
+          a vertex, so it must terminate at a vertex with no incoming edge. Remove that source s: the remaining graph G&minus;s is still a DAG
+          (a subgraph of a DAG has no cycle either), so by the induction hypothesis it has a topological order. Prepending s yields a valid
+          topological order of G. Base case |V|=0 is vacuous. &#8718;</p>
+        </article>
+        <article>
+          <h2><span class="tag">Efficiency</span> Both algorithms run in &Theta;(|V|&nbsp;+&nbsp;|E|)</h2>
+          <p><strong>DFS-based.</strong> Every vertex is colored WHITE&rarr;GRAY&rarr;BLACK exactly once (&Theta;(V) work), and the adjacency
+          list of every vertex is scanned exactly once across the whole traversal, so every edge is examined exactly once (&Theta;(E) work).
+          Pushing a finished vertex onto the output list is O(1). Total: <strong>&Theta;(V + E)</strong>, i.e. linear in the size of the graph.</p>
+          <p><strong>Source-removal (Kahn's).</strong> Computing in-degrees is one pass over all edges: &Theta;(E). Each vertex enters and
+          leaves the queue exactly once: &Theta;(V). Each edge is relaxed (in-degree decremented) exactly once when its tail is dequeued:
+          &Theta;(E). Total: <strong>&Theta;(V + E)</strong> as well &mdash; identical asymptotic class, different constant-factor bookkeeping
+          (a queue instead of the implicit recursion stack).</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- WORKSPACE -->
+  <section class="workspace">
+
+    <div class="panel graph-panel">
+      <div class="panel-head">
+        <h3 id="graphTitle">DFS traversal on G</h3>
+        <span class="pill" id="statusPill">step 0 / 0</span>
+      </div>
+      <svg id="graphSvg" viewBox="0 0 820 460" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--edge-idle)"></path>
+          </marker>
+          <marker id="arrow-active" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"></path>
+          </marker>
+        </defs>
+        <g id="edgeLayer"></g>
+        <g id="nodeLayer"></g>
+      </svg>
+      <p class="message" id="messageLine">Press <strong>Next</strong> to begin the trace.</p>
+    </div>
+
+    <aside class="panel side-panel">
+      <div class="panel-head"><h3>Pseudocode</h3></div>
+      <pre class="code" id="codeBlock"></pre>
+
+      <div class="panel-head structure-head">
+        <h3 id="structureTitle">Recursion stack &amp; output L</h3>
+      </div>
+      <div class="structure" id="structureView"></div>
+    </aside>
+
+  </section>
+
+  <!-- CONTROLS -->
+  <section class="controls">
+    <div class="controls-inner">
+      <button id="btnReset" class="ctrl ghost" title="Reset">&#8634; Reset</button>
+      <button id="btnPrev" class="ctrl" title="Previous step">&#9664; Prev</button>
+      <button id="btnPlay" class="ctrl primary" title="Play / Pause">&#9654; Play</button>
+      <button id="btnNext" class="ctrl" title="Next step">Next &#9654;</button>
+      <div class="speed">
+        <label for="speedRange">Speed</label>
+        <input type="range" id="speedRange" min="1" max="4" value="2" step="1" />
+      </div>
+      <div class="progress-wrap">
+        <input type="range" id="scrub" min="0" max="0" value="0" step="1" />
+      </div>
+    </div>
+  </section>
+
+  <section class="log-panel">
+    <div class="panel-head"><h3>Trace log</h3></div>
+    <ol id="logList" class="log-list"></ol>
+  </section>
+
+</main>
+
+<footer>
+  <p>Built as a Decrease-and-Conquer teaching aid &middot; graph is the classic 8-vertex CLRS example &middot; deploy anywhere static, e.g. Vercel.</p>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
